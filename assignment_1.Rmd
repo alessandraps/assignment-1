@@ -1,0 +1,56 @@
+---
+title: "Assignment 1"
+author: "Alessandra Puig-Santana"
+date: "2023-01-26"
+output: html_document
+---
+
+You will explore amphibian abundance data recorded by the Sierra Lakes Inventory Project. From the Environmental Data Initiative repository: "The Sierra Lakes Inventory Project (SLIP) was a research endeavor that ran from 1995-2002 and has supported research and management of Sierra Nevada aquatic ecosystems and their terrestrial interfaces. We described the physical characteristics of and surveyed aquatic communities for \>8,000 lentic water bodies in the southern Sierra Nevada, including lakes, ponds, marshes, and meadows."
+
+Data citation: Knapp, R.A., C. Pavelka, E.E. Hegeman, and T.C. Smith. 2020. The Sierra Lakes Inventory Project: Non-Native fish and community composition of lakes and ponds in the Sierra Nevada, California ver 2. Environmental Data Initiative. <https://doi.org/10.6073/pasta/d835832d7fd00d9e4466e44eea87fab3>
+
+```{r setup, echo=TRUE, message=FALSE, warning= FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+# Set up chunk
+library(tidyverse)
+library(here)
+library(patchwork)
+library(lubridate)
+library(readxl)
+```
+
+### Read in the data
+
+```{r}
+sierra_amphibians <- read_excel(here("sierra_amphibians.xlsx"))
+```
+
+### Data wrangling
+
+```{r}
+yellow_legged_frogs <- sierra_amphibians %>%
+  filter(amphibian_species == "RAMU",
+         amphibian_life_stage != "EggMass") %>%
+  mutate(date = ymd(survey_date)) %>%
+  mutate(year = year(date)) %>%
+  select(year, amphibian_species,
+         amphibian_life_stage, amphibian_number, lake_id, amphibian_location) %>%
+  group_by(year, amphibian_life_stage)
+```
+
+### First visualization
+
+#### A graph of total mountain yellow-legged frog (Rana muscosa) count each year across all water bodies, by life stage excluding the 'EggMass' level. In other words, you should find the total number of adult, subadult, and tadpole yellow-legged frogs observed in the entire study region by life stage and year, but you will not use the lake ID or amphibian_location in your analyses as additional grouping variables. Hint: Convert the date to a date with the {lubridate} package, then pull just the year using the lubridate::year() function...then you can group by year to get counts.
+
+```{r}
+p1 <- ggplot(data = yellow_legged_frogs, 
+             aes(x = year, 
+                 y = count, 
+                 fill = amphibian_life_state, 
+                 color = amphibian_life_stage))
+```
+
+### Second visualization
+
+#### A column graph containing total counts (over all years of the study) of combined adult and subadult endangered mountain yellow-legged frogs (Rana muscosa) observed in the 5 lakes with the greatest total observed counts. In other words, this graph will have at least 5 columns (OK to have more if there are ties), with Lake ID (these aren't specified in the dataset for confidentiality) as the categorical label on one axis, and total yellow-legged frog counts (adult + subadult counts) in the dataset on the other axis. Make sure they're in high-to-low or low-to-high order by total yellow-legged frog counts. You should exclude tadpoles for this graph. Note: Consider reformatting the lake ID from just a number to a label like "Lake 10025"), then use fct_reorder to convert it to an ordered factor.
