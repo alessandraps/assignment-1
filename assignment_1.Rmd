@@ -1,5 +1,5 @@
 ---
-title: "Assignment 1"
+title: "Assignment 1, Task 1"
 author: "Alessandra Puig-Santana"
 date: "2023-01-26"
 output: html_document
@@ -23,34 +23,96 @@ library(readxl)
 ### Read in the data
 
 ```{r}
+# Read in data
 sierra_amphibians <- read_excel(here("sierra_amphibians.xlsx"))
+
+# Clean up data
+sierra_amphibians_clean <- sierra_amphibians %>%
+  mutate(ymd(survey_date))
 ```
 
 ### Data wrangling
+A graph of total mountain yellow-legged frog (Rana muscosa) count each year across all water bodies, by life stage excluding the 'EggMass' level. In other words, you should find the total number of adult, subadult, and tadpole yellow-legged frogs observed in the entire study region by life stage and year, but you will not use the lake ID or amphibian_location in your analyses as additional grouping variables. Hint: Convert the date to a date with the {lubridate} package, then pull just the year using the lubridate::year() function...then you can group by year to get counts.
 
 ```{r}
-yellow_legged_frogs <- sierra_amphibians %>%
+yellow_legged_frogs <- sierra_amphibians_clean %>%
   filter(amphibian_species == "RAMU",
          amphibian_life_stage != "EggMass") %>%
   mutate(date = ymd(survey_date)) %>%
   mutate(year = year(date)) %>%
   select(year, amphibian_species,
-         amphibian_life_stage, amphibian_number, lake_id, amphibian_location) %>%
+         amphibian_life_stage, amphibian_number,lake_id, amphibian_location) %>%
   group_by(year, amphibian_life_stage)
 ```
 
 ### First visualization
 
-#### A graph of total mountain yellow-legged frog (Rana muscosa) count each year across all water bodies, by life stage excluding the 'EggMass' level. In other words, you should find the total number of adult, subadult, and tadpole yellow-legged frogs observed in the entire study region by life stage and year, but you will not use the lake ID or amphibian_location in your analyses as additional grouping variables. Hint: Convert the date to a date with the {lubridate} package, then pull just the year using the lubridate::year() function...then you can group by year to get counts.
-
 ```{r}
 p1 <- ggplot(data = yellow_legged_frogs, 
-             aes(x = year, 
-                 y = count, 
-                 fill = amphibian_life_state, 
-                 color = amphibian_life_stage))
+             aes(x = year, y = amphibian_number))+
+  geom_bar(stat = "identity", position = "dodge", aes(fill = amphibian_life_stage)) +
+  theme_minimal() +
+  labs(x = "Year",
+       y = "Count",
+       title = "Yearly count of Mountain yellow-legged frog",
+       fill = "Life stage") +
+    theme(legend.position = "top",
+          plot.title = element_text(hjust = 0.2, face = "bold", size = 10),
+          plot.subtitle = element_text(hjust = 0.5, face = "bold", size = 9),
+          axis.title.x = element_text(vjust = 0.2, face = "bold", size = 8),
+          axis.title.y = element_text(face = "bold", size = 8),
+          plot.background = element_rect(fill = "white"),
+          legend.title = element_text(size=8, face = "bold"),
+          legend.text = element_text(size=7),
+          axis.text = element_text(size = 8)) +
+  scale_fill_manual(name = "Life stage", values = c("sienna1", "sienna3", "sienna4"))
+
+# add colors
+
+p1
 ```
 
 ### Second visualization
+```{r}
+# Data wrangling
+
+total_yellow_legged_frogs <- sierra_amphibians_clean %>%
+  filter(amphibian_species == "RAMU",
+         amphibian_life_stage %in% c('Adult', 'SubAdult')) %>%
+  select(amphibian_species,
+         amphibian_life_stage, amphibian_number,lake_id, amphibian_location) %>%
+  group_by(lake_id) %>%
+  summarize(sum_frogs = sum(amphibian_number)) %>%
+  slice_max(sum_frogs, n= 5) %>%
+  reorder()
+
+total_yellow_legged_frogs$lake_id <- sub("^", "Lake", total_yellow_legged_frogs$lake_id)
+  
+```
 
 #### A column graph containing total counts (over all years of the study) of combined adult and subadult endangered mountain yellow-legged frogs (Rana muscosa) observed in the 5 lakes with the greatest total observed counts. In other words, this graph will have at least 5 columns (OK to have more if there are ties), with Lake ID (these aren't specified in the dataset for confidentiality) as the categorical label on one axis, and total yellow-legged frog counts (adult + subadult counts) in the dataset on the other axis. Make sure they're in high-to-low or low-to-high order by total yellow-legged frog counts. You should exclude tadpoles for this graph. Note: Consider reformatting the lake ID from just a number to a label like "Lake 10025"), then use fct_reorder to convert it to an ordered factor.
+```{r}
+p2 <- ggplot(data = total_yellow_legged_frogs, aes(x = reorder(lake_id, sum_frogs), 
+                                                   y = sum_frogs)) +
+  geom_col(aes(fill = lake_id), show.legend = FALSE) +
+  labs(x = "Lake ID", y = "Count", title = "Mountain yellow-legged frog count per lake") +
+  theme_minimal() +
+  theme(plot.title = element_text(hjust = 0.2, face = "bold", size = 10),
+        plot.subtitle = element_text(hjust = 0.5, face = "bold", size = 8),
+        axis.title.x = element_text(vjust = 0.2, face = "bold", size = 8),
+        axis.text.x = element_text(angle = 45, vjust = 0.8),
+        axis.title.y = element_text(face = "bold", size = 8),
+        plot.background = element_rect(fill = "white")) +
+  scale_fill_manual(name = "Lake id", values = c("salmon1", "peachpuff", "salmon", "lightsalmon", "salmon3"))
+
+p2
+
+```
+
+```{r}
+# Combining both graphs using patchwork()
+
+p1 + p2
+
+```
+
